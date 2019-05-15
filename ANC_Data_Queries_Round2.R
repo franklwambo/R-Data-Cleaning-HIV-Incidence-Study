@@ -184,8 +184,23 @@ list_of_datasets <- list("Suspecious ages" = Suspicious_ages, "Wrong Parity Grav
 
 write.xlsx(list_of_datasets, file = ExcelFileName)
 
+##the below portion is useful in forwading the generated workbook to given mail addresses
 
-#write.xlsx(list_of_datasets, file = "data_cleaning.xlsx")
+
+#first configure R to point to the JRE path in your machine
+Sys.setenv(JAVA_HOME="C:\\Program Files\\Java\\jdk1.8.0_151\\jre")
+
+require(mailR)
+
+send.mail(from = "xyz@gmail.com",  
+          to = c("destination1@gmail.com", "destination2@gmail.com"),
+          subject = "ANC Data Quality Issues",
+          body ="ANC Study Queries for response by field workers",
+          smtp = list(host.name = "smtp.gmail.com", port = 587, user.name = "xyz@gmail.com", passwd = "password_for_the_smtp_mail", ssl = TRUE),              
+          authenticate = TRUE,
+          attach.files = c(ExcelFileName),
+          file.names = c(ExcelFileName),
+          send = TRUE)
 
 
 
