@@ -157,7 +157,12 @@ Invalid_EDD_dates=
                      c("person_id","study_id","facility_mflcode", "ANC_study_round","visit_date","edd")]; 
 
 
+##flag sample draw questions with negative status
 
+Negative_with_Sample_draw=
+  anc_round2_dataset[!is.na(anc_round2_dataset$sample_actually_drawn) & anc_round2_dataset$ANC_study_round=="round 2" &
+                       anc_round2_dataset$sample_actually_drawn=="YES" & anc_round2_dataset$first_ANC_hiv_test_result=="N",
+                     c("person_id","study_id","facility_mflcode", "ANC_study_round","visit_date","sample_actually_drawn","first_ANC_hiv_test_result")];
 
 setwd("D:/ANC/R");
 
@@ -176,7 +181,7 @@ ExcelFileName <- paste("data_cleaning_",currentDate,".xlsx",sep="")
 ## output the ANC issues to an Excel file
 require(openxlsx)
 list_of_datasets <- list("Suspecious ages" = Suspicious_ages, "Wrong Parity Gravidae Combo" = Invalid_parity_gravidae_combo, "Invalid gravidae" = invalid_gravidae_values,
-                         "Invalid Blood pressure" = invalid_blood_pressure,
+                         "Invalid Blood pressure" = invalid_blood_pressure,"Negative With Sample Draw" = Negative_with_Sample_draw,
                          "Suspicious weights" = invalid_weights, "Invalid gestation" = invalid_gestation,
                          "Invalid LMP Values" = Invalid_LMP_Values, "Invalid EDD" = Invalid_EDD_dates, "Invalid Residency Start Dates" = Invalid_residency_start_dates,
                          "ART Start Missing Regimen"=ccc_ARTdates_Missing_regimen,
