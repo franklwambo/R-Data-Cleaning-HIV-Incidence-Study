@@ -170,7 +170,7 @@ setwd("D:/ANC/R");
 
 
 
-##get the current date to append to the file name of the intended output
+##get the current date to append to the file name of the intended Excel output
 
 #currentDate <- Sys.Date();
 currentDate <- format(Sys.Date(), "%d%b%Y");
@@ -194,8 +194,11 @@ write.xlsx(list_of_datasets, file = ExcelFileName)
 
 ##the below portion is useful in forwading the generated workbook to given mail addresses
 
+#sending mail messages requires mailR library
 
-#first configure R to point to the JRE path in your machine
+##it is noteworthy that the mailR requires jdk 8 or highre installed
+
+#configuring R to point to the JRE path in your machine
 Sys.setenv(JAVA_HOME="C:\\Program Files\\Java\\jdk1.8.0_151\\jre")
 
 require(mailR)
@@ -209,6 +212,8 @@ send.mail(from = "xyz@gmail.com",
           attach.files = c(ExcelFileName),
           file.names = c(ExcelFileName),
           send = TRUE)
+
+#the above case use the free gmail SMTP server
 
 
 
