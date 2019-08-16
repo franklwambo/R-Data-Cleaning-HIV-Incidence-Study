@@ -1,17 +1,17 @@
-
+#RMySQL is necessary for accessing a MySQL database
 require(RMySQL)
 
 #establishing connection to the MYSQL server
 
 mydb = dbConnect(MySQL(), user='database_user', password='database_password', dbname='clinical', host='hostname')
 
-## call the stored procedure that displays the ANC summary
+## call the stored procedure that displays the ANC/HIV Incidence summary summary
 
 rs = dbSendQuery(mydb, "CALL Extract_Mesh_Round2_Data_Summary()")
 
 anc_round2_dataset = fetch(rs, n=-1)
 
-## the command below is instrumental in clearing a result set
+## the command below is instrumental in clearing a result set; should be done after every database fetch
 
 dbClearResult(rs)
 
@@ -19,8 +19,10 @@ dbClearResult(rs)
 
 #flagging invalid blood pressure values
 
-#first extract the systolic and diastolic blood pressure components
+#blood pressure values are recorded in formats such as 123/90 or 116/81
+#an errored blood pressure is where the numerator(diastolic value) is equal to or less than the denominator(systolic value)
 
+#first extract the systolic and diastolic blood pressure components
 
 systolic_pressure<-as.numeric(gsub("(.*)/.*","\\1",anc_round2_dataset$blood_pressure));
 
@@ -35,13 +37,15 @@ invalid_blood_pressure=
 
 ##invalid gestation values
 
+#99 and 999 is the pre-defined way to acknowledge missing values so anything else violating the expectation is to be flagged
+
 invalid_gestation=
   anc_round2_dataset[!is.na(anc_round2_dataset$gestation) & (as.numeric(anc_round2_dataset$gestation)==0 | as.numeric(anc_round2_dataset$gestation)>50) & 
                        anc_round2_dataset$gestation != "999.0" & anc_round2_dataset$ANC_study_round=="round 2"
                      & anc_round2_dataset$gestation != "99.0" & anc_round2_dataset$gestation != "0.0", 
                      c("person_id","study_id","facility_mflcode","visit_date","gestation")];
 
-#everyone in the study should have gravidae one or more to imply pregnancy
+#everyone in the study/attending the ANC clinic should have gravidae one or more to imply one or more pregnancy
 
 invalid_gravidae_values=
   anc_round2_dataset[!is.na(anc_round2_dataset$gravidae) & as.numeric(anc_round2_dataset$gravidae)<1 & anc_round2_dataset$gravidae != "999.0" & anc_round2_dataset$ANC_study_round=="round 2", 
@@ -104,6 +108,11 @@ Invalid_LMP_Values=
 
 ##invalid parity gravidae combo
 
+##parity is recorded in formats such as 2+0 or 3+1; the first portion is the number of births and the second the number of deaths if any
+
+#gravidae is the number of pregnancies a mother has ever had
+
+#the gravidae value should always be greater than or equivalent to the first portion of parity
 
 library(stringr);
 
@@ -113,20 +122,11 @@ absolute_parity=substr(anc_round2_dataset$parity,0,1)
 
 gravidae_parity_diff=as.numeric(anc_round2_dataset$gravidae)-as.numeric(absolute_parity)
 
-##require(dplyr);
-
-##mutate(gravidae_parity_diff = absolute_parity - as.numeric(absolute_parity))
-
 Invalid_parity_gravidae_combo=
   anc_round2_dataset[!is.na(anc_round2_dataset$parity) & anc_round2_dataset$ANC_study_round=="round 2" &
                        !is.na(anc_round2_dataset$gravidae) & gravidae_parity_diff < 1,
                      c("person_id","study_id","facility_mflcode", "ANC_study_round","visit_date","parity","gravidae")]; 
 
-
-
-##now exporting the identified issues to an external Excel file
-
-## set the current working directory
 
 
 ##tagging invalid HDSS residency start dates
@@ -162,23 +162,26 @@ Invalid_EDD_dates=
 Negative_with_Sample_draw=
   anc_round2_dataset[!is.na(anc_round2_dataset$sample_actually_drawn) & anc_round2_dataset$ANC_study_round=="round 2" &
                        anc_round2_dataset$sample_actually_drawn=="YES" & anc_round2_dataset$first_ANC_hiv_test_result=="N",
+ 
                      c("person_id","study_id","facility_mflcode", "ANC_study_round","visit_date","sample_actually_drawn","first_ANC_hiv_test_result")];
 
+#setting the current working directory
 setwd("D:/ANC/R");
 
-##you first need to install the xlsx package
 
 
-##get the current date to append to the file name
+##get the current date to append to the file name of the intended output
 
 #currentDate <- Sys.Date();
 currentDate <- format(Sys.Date(), "%d%b%Y");
 ExcelFileName <- paste("data_cleaning_",currentDate,".xlsx",sep="") 
 
+
+
 #install.packages("openxlsx")
 
 
-## output the ANC issues to an Excel file
+## output the ANC issues/queries to an Excel file
 require(openxlsx)
 list_of_datasets <- list("Suspecious ages" = Suspicious_ages, "Wrong Parity Gravidae Combo" = Invalid_parity_gravidae_combo, "Invalid gravidae" = invalid_gravidae_values,
                          "Invalid Blood pressure" = invalid_blood_pressure,"Negative With Sample Draw" = Negative_with_Sample_draw,
